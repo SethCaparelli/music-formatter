@@ -1,0 +1,12 @@
+{
+  "name": "music-formatter",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "An app to sterilize and format songs in your music library",
+  "main": "index.js",
+  "scripts": {
+    "test": "node index"
+  },
+  "author": "Seth Caparelli",
+  "license": "ISC"
+}
