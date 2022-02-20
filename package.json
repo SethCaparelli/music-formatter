@@ -3,14 +3,20 @@
   "version": "1.0.0",
   "author": "Seth Caparelli",
   "license": "ISC",
-  "type": "module",
   "description": "An app to sterilize and format songs in your music library",
   "main": "index.js",
   "scripts": {
+    "start": "electron .",
     "format": "node index",
     "clean": "rm -rf node_modules package-lock.json && npm i"
   },
   "devDependencies": {
-    "electron": "17.0.1"
+    "electron": "^17.0.1"
+  },
+  "dependencies": {
+    "concurrently": "^7.0.0",
+    "electron-builder": "^22.14.13",
+    "electron-is-dev": "^2.0.0",
+    "wait-on": "^6.0.1"
   }
 }
