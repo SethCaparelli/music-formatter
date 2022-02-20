@@ -77,7 +77,7 @@ const buildNewPath = (oldPath, newArtist, song, oldArtist, oldAlbum, isArtistMal
 
 }
 
-const main = (state) =>{
+module.exports.main = (state) =>{
     console.log(state);
     // Loop through all the files in the music directory
 
