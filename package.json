@@ -1,12 +1,16 @@
 {
   "name": "music-formatter",
   "version": "1.0.0",
+  "author": "Seth Caparelli",
+  "license": "ISC",
   "type": "module",
   "description": "An app to sterilize and format songs in your music library",
   "main": "index.js",
   "scripts": {
-    "test": "node index"
+    "format": "node index",
+    "clean": "rm -rf node_modules package-lock.json && npm i"
   },
-  "author": "Seth Caparelli",
-  "license": "ISC"
+  "devDependencies": {
+    "electron": "17.0.1"
+  }
 }

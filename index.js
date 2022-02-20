@@ -1,37 +1,84 @@
-import { rename, readdir, unlink } from "fs";
+import {
+    rename,
+    readdir,
+    unlink,
+    mkdir,
+    rmdir
+} from "fs";
 import { join, normalize, parse } from "path";
 import {
     MUSIC_DIRECTORY,
     REGEX,
     WEB_URL_REGEX,
     UNKNOWN_ARTIST,
-    UNKNOWN_ALBUM,
-    VARIOUS_ARTISTS
+    UNKNOWN_ALBUM
 } from "./constants.js";
 
+const modifySong = (song, artist, album, isArtistMalformed) => {
+    if (!song.startsWith(".")) {
+        const oldPath = join(MUSIC_DIRECTORY, artist, album, song);
+        const oldPathObject = parse(oldPath);
 
-const buildNewPath = (songPath, artist, song) => {
-    const newPath = join(MUSIC_DIRECTORY, artist, UNKNOWN_ALBUM, song);
-    const normalizedPath = normalize(newPath);
-    songPath.replace(/(s+)(\&+)/g, "\ ");
+        const cleansedSong = oldPathObject.name.replace(REGEX, "").trim();
+        const parsedSong = cleansedSong.split("-");
 
-    rename(songPath, normalizedPath, err => {
+        if (parsedSong.length > 1) {
+
+            const newArtist = parsedSong[0][0] == "." || isArtistMalformed ? UNKNOWN_ARTIST : parsedSong[0].trim();
+
+            const newSong = parsedSong[1] ? parsedSong[1].trim() : song;
+
+            if (!isNaN(newSong)){
+                unlink(join(MUSIC_DIRECTORY, artist, album, song), (err) => {
+                    if (err) {
+                        console.log(err)
+                    }
+
+                    console.log("Deleted duplicate song: ", song)
+
+                });
+            } else {
+                buildNewPath(oldPath, newArtist, newSong + oldPathObject.ext, artist, album, false);
+            }
+        } if (isArtistMalformed) {
+            buildNewPath(oldPath, UNKNOWN_ARTIST, song, artist, album, true);
+        }
+    }
+}
+
+
+const buildNewPath = (oldPath, newArtist, song, oldArtist, oldAlbum, isArtistMalformed) => {
+    const isAlbumMalformed = WEB_URL_REGEX.test(oldAlbum);
+    const newAlbum = isAlbumMalformed ? UNKNOWN_ALBUM : oldAlbum;
+    const newPath = join(MUSIC_DIRECTORY, newArtist, newAlbum, song);
+
+    mkdir(join(MUSIC_DIRECTORY, newArtist, newAlbum), {recursive: true}, err => {
         if (err) {
-            throw err;
+            console.error(err);
         }
 
-        // fs.unlink(albumDirectory, err => {
-        //     if (err) {
-        //         throw err;
-        //     }
-        // })
+        rename(normalize(oldPath), normalize(newPath), err => {
+            if (err) {
+                console.error(err);
+            }
 
-        console.log(`Song ${songPath} has been reformatted to ${newPath}`);
+            if (isArtistMalformed) {
+                const artistDir = join(MUSIC_DIRECTORY, oldArtist);
+                rmdir(normalize(artistDir), {recursive: true}, err => {
+                    if (err) {
+                        console.error(err)
+                    }
+                });
+            }
+
+            console.log(`SUCCESS: Song ${oldPath} has been reformatted to ${newPath}`);
+        });
     });
+
 }
 
 function formatSongs() {
-    // Loop through all the files in the temp directory
+    // Loop through all the files in the music directory
 
     readdir(normalize(MUSIC_DIRECTORY), (err, artists) => {
         if (err) {
@@ -39,10 +86,11 @@ function formatSongs() {
             process.exit(1);
         }
 
+        // Loop through all artists
         artists.forEach(artist => {
-            if (!artist.startsWith(".")){
-                const isArtistUnknown = WEB_URL_REGEX.test(artist) || artist == UNKNOWN_ARTIST || artist == VARIOUS_ARTISTS;
-                artist = isArtistUnknown ? UNKNOWN_ARTIST : artist;
+            const isArtistUnknown = artist === UNKNOWN_ARTIST;
+            const isArtistMalformed = WEB_URL_REGEX.test(artist);
+            if ((isArtistMalformed || isArtistUnknown) && !artist.startsWith(".")){
                 const albumDirectory = join(MUSIC_DIRECTORY, artist);
 
                 readdir(normalize(albumDirectory), (err, albums) => {
@@ -50,6 +98,7 @@ function formatSongs() {
                         throw err;
                     }
 
+                    // Loop through all albums
                     albums.forEach(album => {
                         if (!album.startsWith(".")) {
                             const songDirectory = join(MUSIC_DIRECTORY, artist, album);
@@ -59,33 +108,7 @@ function formatSongs() {
                                     throw err;
                                 }
                                 songs.forEach(song => {
-                                    if (!song.startsWith(".")) {
-                                        const songPath = join(MUSIC_DIRECTORY, artist, album, song);
-                                        const songObject = parse(songPath);
-
-                                        const cleansedSong = songObject.name.replace(REGEX, "").trim();
-                                        const parsedSong = cleansedSong.split("-");
-
-                                        if (parsedSong.length > 1) {
-
-                                            const newArtist = parsedSong[0][0] == "." ? UNKNOWN_ARTIST : parsedSong[0].trim();
-
-                                            const newSong = parsedSong[1] ? parsedSong[1].trim() : song;
-
-                                            if (!isNaN(newSong)){
-                                                unlink(join(MUSIC_DIRECTORY, artist, album, song), (err) => {
-                                                    if (err) {
-                                                        console.log(err)
-                                                    }
-
-                                                    console.log("Deleted duplicate song: ", song)
-
-                                                });
-                                            } else {
-                                                buildNewPath(songPath, newArtist, newSong + songObject.ext);
-                                            }
-                                        }
-                                    }
+                                    modifySong(song, artist, album, isArtistMalformed);
                                 });
                             });
                         }
