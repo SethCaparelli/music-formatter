@@ -7,7 +7,7 @@
   "main": "index.js",
   "scripts": {
     "start": "electron .",
-    "format": "node index",
+    "format": "node src/main/formatter/index.js",
     "clean": "rm -rf node_modules package-lock.json && npm i"
   },
   "devDependencies": {

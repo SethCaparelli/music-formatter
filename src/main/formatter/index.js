@@ -1,83 +1,13 @@
-const {
-    rename,
-    readdir,
-    unlink,
-    mkdir,
-    rmdir
-} = require("fs");
-const { join, normalize, parse } = require("path");
+const { readdir } = require("fs");
+const { join, normalize } = require("path");
 const {
     MUSIC_DIRECTORY,
-    REGEX,
     WEB_URL_REGEX,
-    UNKNOWN_ARTIST,
-    UNKNOWN_ALBUM
-} = require("./constants.js");
+    UNKNOWN_ARTIST
+} = require("./constants");
+const {Track} = require("./classes/track");
 
-const modifySong = (song, artist, album, isArtistMalformed) => {
-    if (!song.startsWith(".")) {
-        const oldPath = join(MUSIC_DIRECTORY, artist, album, song);
-        const oldPathObject = parse(oldPath);
-
-        const cleansedSong = oldPathObject.name.replace(REGEX, "").trim();
-        const parsedSong = cleansedSong.split("-");
-
-        if (parsedSong.length > 1) {
-
-            const newArtist = parsedSong[0][0] == "." || isArtistMalformed ? UNKNOWN_ARTIST : parsedSong[0].trim();
-
-            const newSong = parsedSong[1] ? parsedSong[1].trim() : song;
-
-            if (!isNaN(newSong)){
-                unlink(join(MUSIC_DIRECTORY, artist, album, song), (err) => {
-                    if (err) {
-                        console.log(err)
-                    }
-
-                    console.log("Deleted duplicate song: ", song)
-
-                });
-            } else {
-                buildNewPath(oldPath, newArtist, newSong + oldPathObject.ext, artist, album, false);
-            }
-        } if (isArtistMalformed) {
-            buildNewPath(oldPath, UNKNOWN_ARTIST, song, artist, album, true);
-        }
-    }
-}
-
-
-const buildNewPath = (oldPath, newArtist, song, oldArtist, oldAlbum, isArtistMalformed) => {
-    const isAlbumMalformed = WEB_URL_REGEX.test(oldAlbum);
-    const newAlbum = isAlbumMalformed ? UNKNOWN_ALBUM : oldAlbum;
-    const newPath = join(MUSIC_DIRECTORY, newArtist, newAlbum, song);
-
-    mkdir(join(MUSIC_DIRECTORY, newArtist, newAlbum), {recursive: true}, err => {
-        if (err) {
-            console.error(err);
-        }
-
-        rename(normalize(oldPath), normalize(newPath), err => {
-            if (err) {
-                console.error(err);
-            }
-
-            if (isArtistMalformed) {
-                const artistDir = join(MUSIC_DIRECTORY, oldArtist);
-                rmdir(normalize(artistDir), {recursive: true}, err => {
-                    if (err) {
-                        console.error(err)
-                    }
-                });
-            }
-
-            console.log(`SUCCESS: Song ${oldPath} has been reformatted to ${newPath}`);
-        });
-    });
-
-}
-
-module.exports.main = (state) =>{
+main = (state) =>{
     console.log(state);
     // Loop through all the files in the music directory
 
@@ -89,8 +19,8 @@ module.exports.main = (state) =>{
 
         // Loop through all artists
         artists.forEach(artist => {
-            const isArtistUnknown = artist === UNKNOWN_ARTIST;
             const isArtistMalformed = WEB_URL_REGEX.test(artist);
+            const isArtistUnknown = artist === UNKNOWN_ARTIST;
             if ((isArtistMalformed || isArtistUnknown) && !artist.startsWith(".")){
                 const albumDirectory = join(MUSIC_DIRECTORY, artist);
 
@@ -104,12 +34,20 @@ module.exports.main = (state) =>{
                         if (!album.startsWith(".")) {
                             const songDirectory = join(MUSIC_DIRECTORY, artist, album);
 
-                            readdir(normalize(songDirectory), (err, songs) => {
+                            readdir(normalize(songDirectory), (err, names) => {
                                 if (err) {
                                     throw err;
                                 }
-                                songs.forEach(song => {
-                                    modifySong(song, artist, album, isArtistMalformed);
+                                names.forEach(name => {
+                                    if (!name.startsWith(".")) {
+                                        const track = new Track(
+                                            MUSIC_DIRECTORY,
+                                            artist,
+                                            album,
+                                            name
+                                        );
+                                        track.modifySong();
+                                    }
                                 });
                             });
                         }
@@ -119,3 +57,5 @@ module.exports.main = (state) =>{
         })
     });
 };
+
+main();
